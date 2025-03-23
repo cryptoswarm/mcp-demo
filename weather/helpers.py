@@ -1,7 +1,8 @@
 import httpx
 
 from typing import Any, Dict
-from weather.constants import USER_AGENT
+
+from constants import USER_AGENT
 
 
 async def make_nws_request(url: str) -> dict[str, Any] | None:
