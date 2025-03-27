@@ -1,0 +1,5 @@
+fastmcp==0.4.1
+mcp[cli] 
+openai 
+python-dotenv 
+pydantic-settings==2.8.1

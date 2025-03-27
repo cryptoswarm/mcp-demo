@@ -1,12 +1,15 @@
 from typing import Any
 import httpx
-from mcp.server.fastmcp import FastMCP
 
+# from initialize_server import mcp
 from constants import NWS_API_BASE
 from helpers import format_alert, make_nws_request
 
 # Initialize FastMCP server
-mcp = FastMCP("weather")
+
+from mcp.server.fastmcp import FastMCP
+
+mcp = FastMCP("weather-server", log_level="ERROR")
 
 
 @mcp.tool()
@@ -64,3 +67,9 @@ Forecast: {period['detailedForecast']}
         forecasts.append(forecast)
 
     return "\n---\n".join(forecasts)
+
+
+if __name__ == "__main__":
+    print("Hello from mcp server!")
+    mcp.run(transport="stdio")
+    # mcp.run()

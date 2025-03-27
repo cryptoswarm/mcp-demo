@@ -1,16 +1,12 @@
-import asyncio
-import sys
 import json
-from typing import Optional
+from typing import List, Optional
 from contextlib import AsyncExitStack
 from openai import AsyncAzureOpenAI
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+from mcp.types import Tool
 
-# from dotenv import load_dotenv
-
-# load_dotenv()  # load environment variables from .env
 from settings import Settings
 
 
@@ -32,6 +28,18 @@ class MCPClient:
                 api_key=self.default_llm_config.api_key,
             )
 
+    async def get_available_tools(self) -> List[Tool]:
+        """
+        Retrieve a list of available tools from the MCP server.
+        """
+        if not self.session:
+            raise RuntimeError("Not connected to MCP server")
+
+        list_tools_result = await self.session.list_tools()
+        print(f"\nlist_tools_result: {list_tools_result.tools}")
+
+        return list_tools_result.tools
+
     async def connect_to_server(self, server_script_path: str):
         """Connect to an MCP server
 
@@ -42,6 +50,13 @@ class MCPClient:
         is_js = server_script_path.endswith(".js")
         if not (is_python or is_js):
             raise ValueError("Server script must be a .py or .js file")
+
+        """Establishes connection to MCP server"""
+        # self._client = stdio_client(self.server_params)
+        # self.read, self.write = await self._client.__aenter__()
+        # session = ClientSession(self.read, self.write)
+        # self.session = await session.__aenter__()
+        # await self.session.initialize()
 
         command = "python" if is_python else "node"
         server_params = StdioServerParameters(
@@ -56,12 +71,18 @@ class MCPClient:
             ClientSession(self.stdio, self.write)
         )
 
+        if not self.session:
+            raise RuntimeError("Not connected to MCP server")
+
         await self.session.initialize()
 
         # List available tools
-        response = await self.session.list_tools()
-        tools = response.tools
-        print("\nConnected to server with tools:", [tool.name for tool in tools])
+        tools_list = await self.get_available_tools()
+
+        print(
+            "\nConnected to server with tools:",
+            [tool.name for tool in tools_list if tool],
+        )
 
     async def process_query(self, query: str) -> str:
         """Process a query using Claude and available tools"""
@@ -71,8 +92,8 @@ class MCPClient:
 
         messages = [user_message]
 
-        response = await self.session.list_tools()
-        print(f"\nAvailable tools: {response}")
+        tools = await self.get_available_tools()
+
         # Antropic tool schema
         # available_tools = [
         #     {
@@ -93,8 +114,9 @@ class MCPClient:
                     "parameters": tool.inputSchema,
                 },
             }
-            for tool in response.tools
+            for tool in tools
         ]
+        print(f"\nAvailable tools: {available_tools}")
 
         # Initial Claude API call
         response = await self.llm.chat.completions.create(
@@ -122,14 +144,17 @@ class MCPClient:
                     function = tool.function
                     tool_name = function.name
                     print(f"\nTool name: {tool_name}, Tool args: {function.arguments}")
-                    try:
-                        tool_args = json.loads(function.arguments)
-                        print(f"Tool args: {tool_args}")
-                    except Exception as e:
-                        print(
-                            f"Error decoding tool arguments: {function.arguments}, error {e}"
-                        )
-                        sys.exit(1)
+                    # try:
+                    #     tool_args = json.loads(function.arguments)
+                    #     print(f"Tool args: {tool_args}")
+                    # except Exception as e:
+                    #     print(
+                    #         f"Error decoding tool arguments: {function.arguments}, error {e}"
+                    #     )
+                    #     sys.exit(1)
+
+                    tool_args = json.loads(function.arguments)
+                    print(f"Tool args: {tool_args}")
 
                     # Execute tool call
                     result = await self.session.call_tool(tool_name, tool_args)
@@ -138,6 +163,7 @@ class MCPClient:
                     )
 
                     print("self.session.call_tool: ", result)
+                    print("choice.message.content: ", choice.message.content)
 
                     assistant_message_content.append(choice.message.content)
                     messages.append(
