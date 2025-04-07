@@ -16,5 +16,5 @@ uv pip install -r requirements.txt
 # Run client
 
 ```uv
-uv run main.py ../mcp-server/main.py
+uv run main.py ../mcp-server/weather_server.py
 ```

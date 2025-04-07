@@ -126,7 +126,7 @@ class MCPClient:
             tools=available_tools,
         )
 
-        print(f"\nresponse: {response}")
+        print(f"\nInitial response: {response}")
         # Process response and handle tool calls
 
         final_text = []
@@ -137,24 +137,19 @@ class MCPClient:
                 final_text.append(query_text)
                 assistant_message_content.append(query_text)
             elif choice.message.tool_calls:
-                for tool in choice.message.tool_calls:
-                    if tool.type != "function":
+                for tool_call in choice.message.tool_calls:
+                    if tool_call.type != "function":
                         continue
 
-                    function = tool.function
+                    function = tool_call.function
                     tool_name = function.name
+                    print("tool is assigned to assistant.content message: ", tool_call)
                     print(f"\nTool name: {tool_name}, Tool args: {function.arguments}")
-                    # try:
-                    #     tool_args = json.loads(function.arguments)
-                    #     print(f"Tool args: {tool_args}")
-                    # except Exception as e:
-                    #     print(
-                    #         f"Error decoding tool arguments: {function.arguments}, error {e}"
-                    #     )
-                    #     sys.exit(1)
 
-                    tool_args = json.loads(function.arguments)
-                    print(f"Tool args: {tool_args}")
+                    if function.arguments:
+                        tool_args = json.loads(function.arguments)
+                    else:
+                        tool_args = {}
 
                     # Execute tool call
                     result = await self.session.call_tool(tool_name, tool_args)
@@ -163,22 +158,43 @@ class MCPClient:
                     )
 
                     print("self.session.call_tool: ", result)
-                    print("choice.message.content: ", choice.message.content)
 
-                    assistant_message_content.append(choice.message.content)
-                    messages.append(
-                        {"role": "assistant", "content": assistant_message_content}
-                    )
                     messages.append(
                         {
-                            "role": "user",
-                            "content": [
+                            "role": "assistant",
+                            "content": assistant_message_content,
+                            "tool_calls": [
                                 {
-                                    "type": "tool_result",
-                                    "tool_use_id": tool.id,
-                                    "content": result.content[0].text,
+                                    "id": tool_call.id,
+                                    "function": {
+                                        "name": tool_name,
+                                        "arguments": tool_call.function.arguments,
+                                    },
+                                    "type": "function",
                                 }
                             ],
+                        }
+                    )
+
+                    # messages.append(
+                    #     {
+                    #         "role": "user",
+                    #         "content": [
+                    #             {
+                    #                 "type": "tool_result",
+                    #                 "tool_use_id": tool_call.id,
+                    #                 "content": result.content[0].text,
+                    #             }
+                    #         ],
+                    #     }
+                    # )
+
+                    messages.append(
+                        {
+                            "tool_call_id": tool_call.id,
+                            "role": "tool",
+                            "name": tool_name,
+                            "content": result.content[0].text,
                         }
                     )
 
@@ -190,8 +206,7 @@ class MCPClient:
                         messages=messages,
                         tools=available_tools,
                     )
-
-                    # final_text.append(response.content[0].text)
+                    print(f"\nfinal response: {response}")
                     final_text.append(response.choices[0].message.content)
 
         return "\n".join(final_text)

@@ -13,5 +13,5 @@ uv run main.py
 Run with the mcp-inspector:
 
 ```python
-mcp dev ~/<fullpath>/main.py
+mcp dev ~/<fullpath>/weather_server.py
 ```
