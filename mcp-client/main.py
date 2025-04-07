@@ -1,6 +1,6 @@
 import sys
 import asyncio
-from client import MCPClient
+from weather_client import MCPClient
 
 
 async def main():
