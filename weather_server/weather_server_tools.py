@@ -1,18 +1,12 @@
-from typing import Any
-import httpx
-
-# from initialize_server import mcp
 from constants import NWS_API_BASE
-from helpers import format_alert, make_nws_request
+from utils import format_alert
 
-# Initialize FastMCP server
+from weather_client import make_nws_request
 
-from mcp.server.fastmcp import FastMCP
-
-mcp = FastMCP("weather-server", log_level="ERROR")
+# from main import mcp
 
 
-@mcp.tool()
+# @mcp.tool()
 async def get_alerts(state: str) -> str:
     """Get weather alerts for a US state.
 
@@ -32,7 +26,7 @@ async def get_alerts(state: str) -> str:
     return "\n---\n".join(alerts)
 
 
-@mcp.tool()
+# @mcp.tool()
 async def get_forecast(latitude: float, longitude: float) -> str:
     """Get weather forecast for a location.
 
@@ -59,17 +53,11 @@ async def get_forecast(latitude: float, longitude: float) -> str:
     forecasts = []
     for period in periods[:5]:  # Only show next 5 periods
         forecast = f"""
-{period['name']}:
-Temperature: {period['temperature']}°{period['temperatureUnit']}
-Wind: {period['windSpeed']} {period['windDirection']}
-Forecast: {period['detailedForecast']}
-"""
+            {period['name']}:
+            Temperature: {period['temperature']}°{period['temperatureUnit']}
+            Wind: {period['windSpeed']} {period['windDirection']}
+            Forecast: {period['detailedForecast']}
+            """
         forecasts.append(forecast)
 
     return "\n---\n".join(forecasts)
-
-
-if __name__ == "__main__":
-    print("Hello from mcp server!")
-    mcp.run(transport="stdio")
-    # mcp.run()

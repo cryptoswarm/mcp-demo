@@ -7,19 +7,20 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.types import Tool
 
-from settings import Settings
+from configs import LlmClientsConfig
 
 
 class MCPClient:
     def __init__(self):
         # Initialize session and client objects
-        self.settings = Settings()
+        self.settings = LlmClientsConfig()
         self.session: Optional[ClientSession] = None
         self.exit_stack = AsyncExitStack()
 
-        self.default_llm_config = list(
-            filter(lambda client: client.host == "aoai", self.settings.LLM_CLIENTS)
-        )[0]
+        # self.default_llm_config = list(
+        #     filter(lambda client: client.host == "aoai", self.settings.LLM_CLIENTS)
+        # )[0]
+        self.default_llm_config = self.settings.AOAI
 
         if self.default_llm_config is not None:
             self.llm = AsyncAzureOpenAI(
@@ -141,10 +142,13 @@ class MCPClient:
                     if tool_call.type != "function":
                         continue
 
+                    print("tool is assigned to assistant.content message: ", tool_call)
+                    print(
+                        f"\nTool name: {tool_call.function.name}, Tool args: {tool_call.function.arguments}"
+                    )
+
                     function = tool_call.function
                     tool_name = function.name
-                    print("tool is assigned to assistant.content message: ", tool_call)
-                    print(f"\nTool name: {tool_name}, Tool args: {function.arguments}")
 
                     if function.arguments:
                         tool_args = json.loads(function.arguments)
